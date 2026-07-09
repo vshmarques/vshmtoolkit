@@ -59,7 +59,7 @@ public sealed class ExcelExporter : IDisposable
         writer.WriteEndElement();
     }
 
-    public void AddSheet<T>(string sheetName, IEnumerable<T> data, bool includeHeader = true)
+    public void AddSheet<T>(string sheetName, IEnumerable<T> data, bool includeHeader = true, Action<ColumnBuilder<T>>? configure = null)
     {
         var worksheetPart = _workbookPart.AddNewPart<WorksheetPart>();
         var relationshipId = _workbookPart.GetIdOfPart(worksheetPart);
@@ -71,7 +71,10 @@ public sealed class ExcelExporter : IDisposable
             Name = sheetName
         });
 
-        var columns = GetColumns(new ColumnBuilder<T>());
+        var builder = new ColumnBuilder<T>();
+        configure?.Invoke(builder);
+
+        var columns = GetColumns(builder);
 
         using var writer = OpenXmlWriter.Create(worksheetPart);
 
@@ -105,7 +108,8 @@ public sealed class ExcelExporter : IDisposable
     {
         var props = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
                              .Where(p => p.CanRead &&
-                                         p.GetCustomAttribute<ExcelIgnoreAttribute>() == null)
+                                         p.GetCustomAttribute<ExcelIgnoreAttribute>() == null &&
+                                         !builder.IsIgnored(p.Name))
                              .ToList();
 
         return props.Select(p =>

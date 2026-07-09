@@ -42,9 +42,10 @@ public sealed class CsvExporter
         }
     }
 
-    public async Task Export<T>(IEnumerable<T> data, Stream outputStream)
+    public async Task Export<T>(IEnumerable<T> data, Stream outputStream, Action<ColumnBuilder<T>>? configure = null)
     {
         var builder = new ColumnBuilder<T>();
+        configure?.Invoke(builder);
         var columns = GetColumns(builder);
 
         await using var writer = new StreamWriter(outputStream, _options.Encoding, _bufferSize, leaveOpen: true);
@@ -86,7 +87,8 @@ public sealed class CsvExporter
     {
         var props = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
                              .Where(p => p.CanRead &&
-                                         p.GetCustomAttribute<CsvIgnoreAttribute>() == null)
+                                         p.GetCustomAttribute<CsvIgnoreAttribute>() == null &&
+                                         !builder.IsIgnored(p.Name))
                              .ToList();
 
         return props.Select(p =>

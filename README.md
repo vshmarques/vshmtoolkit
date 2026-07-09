@@ -83,11 +83,20 @@ await exporter.Export(pedidos, stream);
 ### CSV assincrono com valor customizado
 
 ```csharp
+async IAsyncEnumerable<Pedido> ObterPedidosAsync()
+{
+    foreach (var pedido in pedidos)
+    {
+        yield return pedido;
+        await Task.Yield();
+    }
+}
+
 await using var stream = File.Create("pedidos.csv");
 
 var exporter = new CsvExporter(new CsvOptions());
 
-await exporter.ExportAsync(pedidos.ToAsyncEnumerable(), stream, columns =>
+await exporter.ExportAsync(ObterPedidosAsync(), stream, columns =>
 {
     columns.Map(p => p.Total, p => p.Total.ToString("N2"));
 });
@@ -114,10 +123,19 @@ exporter.Complete();
 ### Excel assincrono com valor customizado
 
 ```csharp
+async IAsyncEnumerable<Pedido> ObterPedidosAsync()
+{
+    foreach (var pedido in pedidos)
+    {
+        yield return pedido;
+        await Task.Yield();
+    }
+}
+
 await using var stream = File.Create("pedidos.xlsx");
 using var exporter = new ExcelExporter(stream);
 
-await exporter.AddSheetAsync("Pedidos", pedidos.ToAsyncEnumerable(), configure: columns =>
+await exporter.AddSheetAsync("Pedidos", ObterPedidosAsync(), configure: columns =>
 {
     columns.Map(p => p.Total, p => p.Total.ToString("C"));
 });
@@ -159,4 +177,5 @@ Reports/
 ## Licenca
 
 Este projeto esta configurado para distribuicao sob a licenca MIT.
+
 
